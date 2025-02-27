@@ -1,0 +1,31 @@
+<Group id="xccdf_gov.nist.mscp.content_group_all_rules">
+  <title>All rules</title>
+  <description>
+    All the rules
+  </description>
+  <warning category="general">
+    The check/fix commands outlined in this section must be run with elevated privileges.
+  </warning>
+  {% set baseline_length = baselines | length %}
+  {% set x = 1 %}
+  {% set odv_loop_count = 1 %}
+  {% for rule in rules %}
+    {% if baseline_length == 1 %}
+    {% set odv_label = baselines[0] %}
+    {% elif rule.customized %}
+    {% set odv_label = "custom" %}
+    {% endif %}
+    {% if rule.odv %}
+    {% set odv_loop_count = rule.odv | length %}
+    {% set odv_keys_sorted = rule.odv.keys() | list | sort %}
+    {% for a in range(0,odv_loop_count) %}
+    {% set odv_label = odv_keys_sorted | nth(a) %}
+    {% include "rule.xml.jinja" %}
+    {% endfor %}
+    {% else %}
+    {% include "rule.xml.jinja" %}
+    {% endif %}
+    {% set x = x + 1 %}
+    {% endfor %}
+  {% endfor %}
+</Group>

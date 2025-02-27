@@ -14,15 +14,15 @@ from jinja2 import Environment, FileSystemLoader
 from loguru import logger
 
 # Local python modules
-from src.mscp.classes import Baseline, Macsecurityrule
-from src.mscp.common_utils import config, get_version_data, make_dir
+from src.mscp.classes import Macsecurityrule
+from src.mscp.common_utils import config, get_version_data
 
 
 def create_scap(
     output_path: Path,
     version_info: dict[str, Any],
     rules: list[Macsecurityrule],
-    os_name: str,
+    baselines: list[str],
     export_as: str,
 ) -> None:
     date_time: str = datetime.now().isoformat(timespec="seconds")
@@ -32,7 +32,12 @@ def create_scap(
         trim_blocks=True,
         lstrip_blocks=True,
     )
-    main_template = env.get_template("main.xml.jinja")
+
+    try:
+        os_name, os_version = version_info["cpe"].split(":")[2:4]
+    except (IndexError, ValueError) as e:
+        logger.error(f"Error parsing os_name and os_version from CPE: {e}")
+        sys.exit(1)
 
     match os_name:
         case "ios":
@@ -42,16 +47,35 @@ def create_scap(
         case _:
             os_type = "macOS"
 
+    match export_as:
+        case "oval":
+            scap_template = env.get_template("oval_main.xml.jinja")
+        case "xccdf":
+            scap_template = env.get_template("xccdf_main.xml.jinja")
+        case _:
+            scap_template = env.get_template("main.xml.jinja")
+
     rule_dict_list: list[dict] = [rule.to_dict() for rule in rules]
 
-    rendered_output = main_template.render(
+    for rule_dict in rule_dict_list:
+        odv = rule_dict.get("odv", {})
+        if "hint" in odv:
+            odv.pop("hint")
+
+    rendered_output = scap_template.render(
         date_time=date_time,
         guidance=version_info.get("version", ""),
-        os_version=version_info.get("os", ""),
+        os_version=os_version,
+        os_name=os_name,
         cpe=version_info.get("cpe", ""),
         os_type=os_type,
         rules=rule_dict_list,
+        export_as=export_as,
+        baselines=baselines,
     )
+
+    output_path.write_text(rendered_output, encoding="utf-8")
+    logger.info(f"SCAP file created: {output_path}")
 
 
 def generate_scap(args: argparse.Namespace) -> None:
@@ -79,7 +103,9 @@ def generate_scap(args: argparse.Namespace) -> None:
     filenameversion = (
         current_version_data["version"].split(", ", maxsplit=1)[-1].replace(" ", "_")
     )
-    base_filename: str = f"{args.os_name}_{current_version_data.get('os', None)}_Security_Compliance_Benchmark-{filenameversion}.xml"
+    base_filename: str = (
+        f"{args.os_name}_{current_version_data.get('os', None)}_Security_Compliance_Benchmark-{filenameversion}.xml"
+    )
 
     if args.oval:
         export_as = "oval"

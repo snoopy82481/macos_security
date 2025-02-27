@@ -1,0 +1,53 @@
+{% set check_tags = ["permanent", "inherent", "n_a"] %}
+<Rule id="xccdf_gov.nist.mscp.content_rule_{{ rule.rule_id }}_{{ odv_label }}" selected="false" role="full" severity="{{ rule.severity if rule.severity is not none else \"unknown\" }}" weight="1.0">
+  <title>{{ rule.title }}</title>
+  <description>{{ rule.discussion | escape | rstrip }}
+
+  {{ rule.check | escape if rule.check is not none else "" }}
+
+  Result: {{ rule.result if rule.result is not none else "" }}
+  </description>
+  {% for reference in rule.references %}
+  {% if reference.nist_controls and reference.nist_controls not none or "N/A" %}
+  <reference href="https://csrc.nist.gov/publications/detail/sp/800-53/rev-5/final">NIST SP 800-53r5: {{ reference.nist_controls | join(', ') }}</reference>
+  {% endif %}
+  {% if reference.nist_171 and reference.nist_171 not none or "N/A" %}
+  <reference href="https://csrc.nist.gov/publications/detail/sp/800-171/rev-2/final">NIST SP 800-171r3: {{ reference.nist_171 | join(', ') }}</reference>
+  {% endif %}
+  {% if reference.disa_stig and reference.disa_stig not none or "N/A" %}
+  <reference href="https://public.cyber.mil/stigs/downloads/">DISA STIG(s): {{ reference.disa_stig | join(', ') }}</reference>
+  {% endif %}
+  {% if reference.cis and reference.cis not none or "N/A" %}
+  {% if reference.cis.benchmark and reference.cis.benchmark not none or "N/A" %}
+  <reference href="https://www.cisecurity.org/cis-benchmarks/">CIS Benchmark: {{ reference.cis.benchmark | join(', ') }}</reference>
+  {% endif %}
+  {% if reference.cis.control_v8 and reference.cis.control_v8 not none or "N/A" %}
+  <reference href="https://www.cisecurity.org/controls/">CIS Benchmark: {{ reference.cis.control_v8 | join(', ') }}</reference>
+  {% endif %}
+  {% endif %}
+  {% for k, v in rule.references.items() %}
+  {% if k == "cci" or k == "srg" %}
+  {{ "<reference source=\"{}\" ref_id=\"{}\"/>".format(k, v[0]) }}
+  {% elseif k == "custom" %}
+  {% for i, v in rule.references.custom_ref %}
+  {{ "<reference href='#'>{}".format(i) }}
+  {% endif %}
+  {% endfor %}
+  {% endfor %}
+  {% if export_as = "xccdf" %}
+  <ident system="https://ncp.nist.gov/cce">{{ rule.references.cce[0] if rule.references.cce and rule.references.cce != "N/A" else "CCE-11111-1" }}</ident>
+  <fixtext>
+    {{ rule.fix | escape }}
+  </fixtext>
+  {% endif %}
+  {% if export_as = "scap" %}
+  {% if rule.tags in check_tags %}
+  <check system="http://scap.nist.gov/schema/ocil/2">
+  <check-content-ref href="ocil.xml"/></check>
+  {% else %}
+  <check system="http://oval.mitre.org/XMLSchema/oval-definitions-5">
+    <check-content-ref href="oval.xml" name="oval:mscp:def:{{ x }}"/>
+  </check>
+  {% endif %}
+  {% endif %}
+</Rule>
