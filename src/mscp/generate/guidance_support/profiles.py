@@ -8,14 +8,16 @@ preferences plists.  `get_payload_content_by_type` groups rule payloads;
 """
 
 # Standard python modules
+import datetime
 from collections import defaultdict
-from datetime import date
+
+# from datetime import date, datetime
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 # Local python modules
 from ...classes import Baseline, Macsecurityrule, Payload
-from ...common_utils import logger, make_dir, run_command, APPLE_OS
+from ...common_utils import APPLE_OS, logger, make_dir, run_command
 
 
 def get_payload_content_by_type(
@@ -67,7 +69,7 @@ def sign_config_profile(in_file: Path, out_file: Path, cert_hash: str) -> None:
     """
 
     cmd = f"security cms -SZ {cert_hash} -i {in_file} -o {out_file}"
-    output, error = run_command(cmd)
+    output, _ = run_command(cmd)
 
     if output:
         logger.info(f"Signed Configuration profile written to {out_file}")
@@ -104,9 +106,9 @@ def generate_profiles(
         )
         return
 
-    def merge_flat_settings(flat_settings: List[Dict[str, Any]]) -> Dict[str, Any]:
-        agg: defaultdict[str, List[Any]] = defaultdict(list)
-        result: Dict[str, Any] = {}
+    def merge_flat_settings(flat_settings: list[dict[str, Any]]) -> dict[str, Any]:
+        agg: defaultdict[str, list[Any]] = defaultdict(list)
+        result: dict[str, Any] = {}
 
         for d in flat_settings:
             for k, v in d.items():
@@ -122,6 +124,8 @@ def generate_profiles(
 
         return result
 
+    date_today: datetime.date = datetime.datetime.now(tz=datetime.UTC).date()
+    # date_today: str = date.today().strftime("%Y-%m-%d")
     unsigned_output_path: Path = Path(build_path, "mobileconfigs", "unsigned")
     signed_output_path: Path = Path(build_path, "mobileconfigs", "signed")
     plist_output_path: Path = Path(build_path, "mobileconfigs", "preferences")
@@ -145,7 +149,7 @@ def generate_profiles(
         rule
         for profile in baseline.profile
         for rule in profile.rules
-        if "Excluded" not in rule.section
+        if rule.section and "Excluded" not in rule.section
     ]
 
     grouped_payloads: dict = get_payload_content_by_type(valid_rules)
@@ -154,7 +158,7 @@ def generate_profiles(
         identifier=f"consolidated.{baseline_name}",
         organization="macOS Security Compliance Project",
         displayname=f"{baseline_name} settings",
-        description=f"Consolidated configuration settings for {baseline_name} - Created on {date.today()}.",
+        description=f"Consolidated configuration settings for {baseline_name} - Created on {date_today}.",
     )
 
     for payload_type, settings_list in grouped_payloads.items():
@@ -180,7 +184,7 @@ def generate_profiles(
             c if c.isalnum() or c in "._-" else "_" for c in payload_type
         )
         identifier = f"mscp.{sanitized_payload_type}.{baseline_name}"
-        description = f"Configuration settings for the {payload_type} preference domain - Created on {date.today()}."
+        description = f"Configuration settings for the {payload_type} preference domain - Created on {date_today}."
         organization = "macOS Security Compliance Project"
         displayname = f"[{baseline_name}] {payload_type} settings"
 
@@ -202,7 +206,7 @@ def generate_profiles(
                             granular_profile = Payload(
                                 identifier=f"mscp.{domain}.{setting}",
                                 organization=organization,
-                                description=f"Configuration for {domain}:{setting} - Created on {date.today()}",
+                                description=f"Configuration for {domain}:{setting} - Created on {date_today}",
                                 displayname=f"[{domain}] - {setting}",
                             )
 
@@ -228,7 +232,7 @@ def generate_profiles(
                     granular_profile = Payload(
                         identifier=f"mscp.{payload_type}.{setting}",
                         organization=organization,
-                        description=f"Configuration for {payload_type}:{setting} - Created on {date.today()}",
+                        description=f"Configuration for {payload_type}:{setting} - Created on {date_today}",
                         displayname=f"[{payload_type}] - {setting}",
                     )
                     granular_profile.add_payload(payload_type, {setting: value})
