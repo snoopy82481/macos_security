@@ -14,15 +14,15 @@ import time
 from pathlib import Path
 from typing import Any
 
-# Local python modules
-from ..classes import Author, Baseline, Macsecurityrule
-from ..common_utils import config, make_dir, open_file
-from ..common_utils.logger_instance import logger
-
-# Additional python modules
-from ..common_utils import conditional_inject_spinner
 from yaspin.core import Yaspin
 from yaspin.spinners import Spinners
+
+# Local python modules
+from ..classes import Author, Baseline, Macsecurityrule
+
+# Additional python modules
+from ..common_utils import conditional_inject_spinner, config, make_dir, open_file
+from ..common_utils.logger_instance import logger
 
 
 def update_rule_with_custom_references(
@@ -65,11 +65,11 @@ def generate_mapping(sp: Yaspin, args: argparse.Namespace) -> None:
 
     csv_data: dict[str, Any] = open_file(args.csv)
 
-    if args.framework not in csv_data.keys():
+    if args.framework not in csv_data:
         logger.error(f"{args.framework} not found in csv header row.")
         sys.exit()
 
-    for other_header in csv_data:
+    for other_header, _ in csv_data:
         custom_rules: list[Macsecurityrule] = []
 
         if other_header == args.framework:
