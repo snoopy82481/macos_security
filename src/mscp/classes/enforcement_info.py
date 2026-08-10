@@ -1,5 +1,6 @@
-from typing import Optional, Union, Literal
-from pydantic import Field, ConfigDict, model_validator
+from typing import Literal
+
+from pydantic import ConfigDict, Field, model_validator
 
 from ._base import BaseModelWithAccessors
 
@@ -44,8 +45,8 @@ class ShellCheck(BaseModelWithAccessors):
     shell: str = Field(
         "", description="Shell command(s) to evaluate the state of a configuration."
     )
-    result: Optional[ResultDef] = None
-    additional_info: Optional[str] = ""
+    result: ResultDef | None = None
+    additional_info: str | None = ""
 
     @model_validator(mode="after")
     def validate_shell_or_additional_info(self) -> "ShellCheck":
@@ -69,11 +70,11 @@ class ShellFix(BaseModelWithAccessors):
 
     model_config = ConfigDict(extra="ignore")
 
-    shell: Optional[str] = Field(
+    shell: str | None = Field(
         "",
         description="Shell command(s) to fix the configuration if the check command fails.",
     )
-    additional_info: Optional[str] = ""
+    additional_info: str | None = ""
 
     @model_validator(mode="after")
     def validate_shell_or_additional_info(self) -> "ShellFix":
@@ -95,11 +96,11 @@ class DefaultStateShell(BaseModelWithAccessors):
 
     model_config = ConfigDict(extra="ignore")
 
-    shell: Optional[str] = Field(
+    shell: str | None = Field(
         "",
         description="Shell command(s) to restore the system to a default factory state.",
     )
-    note: Optional[str] = ""
+    note: str | None = ""
 
     @model_validator(mode="after")
     def validate_shell_or_note(self) -> "DefaultStateShell":
@@ -124,6 +125,6 @@ class EnforcementInfo(BaseModelWithAccessors):
 
     model_config = ConfigDict(extra="forbid")
 
-    check: Optional[ShellCheck] = None
-    fix: Optional[ShellFix] = None
-    default_state: Optional[DefaultStateShell] = None
+    check: ShellCheck | None = None
+    fix: ShellFix | None = None
+    default_state: DefaultStateShell | None = None
