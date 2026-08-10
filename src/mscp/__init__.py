@@ -12,8 +12,8 @@ mSCP log output should enable it (typically via `set_logger`).
 """
 
 from loguru import logger
-from .classes.baseline import Baseline
 
+from .classes.baseline import Baseline
 from .classes.loguruformatter import LoguruFormatter
 from .classes.macsecurityrule import Macsecurityrule
 from .classes.payload import Payload
@@ -46,28 +46,28 @@ __version__ = "2.0.0"
 __all__ = [
     "Baseline",
     "Macsecurityrule",
-    "LoguruFormatter",
     "Payload",
     "RuleLibrary",
-    "config",
     "append_text",
+    "baseline",
+    "config",
     "create_csv",
     "create_plist",
     "create_yaml",
+    "guidance",
+    "LoguruFormatter",
+    "mapping",
     "make_dir",
     "open_csv",
     "open_file",
     "open_plist",
     "open_yaml",
+    "parse_cli",
     "remove_dir",
     "remove_dir_contents",
     "remove_file",
     "run_command",
-    "baseline",
-    "guidance",
-    "mapping",
-    "parse_cli",
-    "validate_yaml_file",
     "set_logger",
     "translation",
+    "validate_yaml_file",
 ]
