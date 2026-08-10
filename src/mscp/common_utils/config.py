@@ -30,7 +30,7 @@ try:
     _pkg_data = Path(str(files("mscp").joinpath("data")))
     if not _pkg_data.is_dir():
         raise FileNotFoundError(_pkg_data)
-except Exception:
+except (AttributeError, FileNotFoundError, TypeError):
     _pkg_data = Path(__file__).parent.parent / "data"
 
 _cwd = Path.cwd()
@@ -41,7 +41,7 @@ try:
     logger.info("Attempting to open config file: {}", CONFIG_PATH)
     config = open_file(CONFIG_PATH)
     logger.success("Config file loaded successfully")
-except Exception as e:
+except (FileNotFoundError, OSError) as e:
     logger.error("An error occurred while loading the config file: {}", e)
     raise
 
