@@ -11,9 +11,10 @@ directory tree, gathers them, and returns a flat
 from pathlib import Path
 from typing import Any
 
+from .file_handling import open_file
+
 # Local python modules
 from .logger_instance import logger
-from .file_handling import open_file
 
 
 def collect_overrides(override_location: Path) -> dict[str, Any]:
@@ -51,7 +52,7 @@ def collect_overrides(override_location: Path) -> dict[str, Any]:
             for k, v in override_data.items():
                 overrides[override_id][k] = v
 
-        except Exception as e:
+        except (OSError, ValueError, KeyError) as e:
             logger.error("Failed to load override from file {}: {}", override_file, e)
 
     return overrides
