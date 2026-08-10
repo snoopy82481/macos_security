@@ -7,9 +7,10 @@ the user, validates the response against the rules, and re-prompts on
 failure.
 """
 
-# Standard python modules
-from typing import Any, Dict, Optional
 import re
+
+# Standard python modules
+from typing import Any
 
 # Local python modules
 # from .logger_instance import logger
@@ -17,8 +18,8 @@ import re
 
 def prompt_for_odv(
     prompt: str,
-    odv_hint: Dict[str, Any],
-    default: Optional[Any] = None,
+    odv_hint: dict[str, Any],
+    default: Any | None = None,
 ) -> Any:
     """
     Prompt the user for an 'organization defined value' (ODV) using a single hint dict
@@ -48,7 +49,7 @@ def prompt_for_odv(
 
     # ---- helpers ------------------------------------------------------------
 
-    def _apply_regex(text: str, pattern: str) -> Optional[str]:
+    def _apply_regex(text: str, pattern: str) -> str | None:
         """Return error message if text does NOT match the pattern; else None."""
         try:
             if re.fullmatch(pattern, text) is None:
@@ -71,8 +72,8 @@ def prompt_for_odv(
             )
 
     def _validate(
-        value: Any, raw_text: str, dt: str, rules: Dict[str, Any]
-    ) -> Optional[str]:
+        value: Any, raw_text: str, dt: str, rules: dict[str, Any]
+    ) -> str | None:
         """Return error message string if invalid; else None."""
 
         # if rules are not defined, accept any values
