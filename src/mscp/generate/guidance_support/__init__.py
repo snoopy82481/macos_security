@@ -12,19 +12,19 @@ Markdown tree for static site generators), `generate_excel` (Excel workbook),
 __all__ = [
     "generate_ddm",
     "generate_documents",
-    "generate_markdown_tree",
     "generate_excel",
-    "generate_profiles",
-    "generate_script",
-    "generate_restore_script",
     "generate_manifest",
+    "generate_markdown_tree",
+    "generate_profiles",
+    "generate_restore_script",
+    "generate_script",
 ]
 
 
 from .ddm import generate_ddm
 from .documents import generate_documents
-from .markdown_tree import generate_markdown_tree
 from .excel import generate_excel
-from .profiles import generate_profiles
-from .script import generate_script, generate_restore_script
 from .manifest import generate_manifest
+from .markdown_tree import generate_markdown_tree
+from .profiles import generate_profiles
+from .script import generate_restore_script, generate_script

@@ -8,7 +8,7 @@ dynamic = ["version"]
 description = 'The macOS Security Compliance Project is an open source effort to provide a programmatic approach to generating security guidance.'
 readme = "README.md"
 requires-python = ">=3.12"
-license = {text = "CC-BY-4.0"}
+license = "CC-BY-4.0"
 license-files = ["LICEN[CS]E*"]
 authors = []
 keywords = ["macos", "security", "compliance", "nist", "scap", "baseline", "stig", "cis"]
@@ -76,3 +76,6 @@ packages = ["src/mscp"]
 testpaths = ["tests"]
 pythonpath = ["src"]
 addopts = "--import-mode=importlib"
+
+[tool.ruff]
+extend-select = ["RUF022"]
