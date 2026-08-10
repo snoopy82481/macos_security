@@ -19,6 +19,8 @@ from typing import Any
 from ...classes import Baseline, Macsecurityrule, Payload
 from ...common_utils import APPLE_OS, logger, make_dir, run_command
 
+DATE_TODAY: datetime.date = datetime.datetime.now(tz=datetime.UTC).date()
+
 
 def get_payload_content_by_type(
     rules: list[Macsecurityrule],
@@ -124,8 +126,6 @@ def generate_profiles(
 
         return result
 
-    date_today: datetime.date = datetime.datetime.now(tz=datetime.UTC).date()
-    # date_today: str = date.today().strftime("%Y-%m-%d")
     unsigned_output_path: Path = Path(build_path, "mobileconfigs", "unsigned")
     signed_output_path: Path = Path(build_path, "mobileconfigs", "signed")
     plist_output_path: Path = Path(build_path, "mobileconfigs", "preferences")
@@ -158,7 +158,7 @@ def generate_profiles(
         identifier=f"consolidated.{baseline_name}",
         organization="macOS Security Compliance Project",
         displayname=f"{baseline_name} settings",
-        description=f"Consolidated configuration settings for {baseline_name} - Created on {date_today}.",
+        description=f"Consolidated configuration settings for {baseline_name} - Created on {DATE_TODAY}.",
     )
 
     for payload_type, settings_list in grouped_payloads.items():
@@ -184,7 +184,7 @@ def generate_profiles(
             c if c.isalnum() or c in "._-" else "_" for c in payload_type
         )
         identifier = f"mscp.{sanitized_payload_type}.{baseline_name}"
-        description = f"Configuration settings for the {payload_type} preference domain - Created on {date_today}."
+        description = f"Configuration settings for the {payload_type} preference domain - Created on {DATE_TODAY}."
         organization = "macOS Security Compliance Project"
         displayname = f"[{baseline_name}] {payload_type} settings"
 
@@ -206,7 +206,7 @@ def generate_profiles(
                             granular_profile = Payload(
                                 identifier=f"mscp.{domain}.{setting}",
                                 organization=organization,
-                                description=f"Configuration for {domain}:{setting} - Created on {date_today}",
+                                description=f"Configuration for {domain}:{setting} - Created on {DATE_TODAY}",
                                 displayname=f"[{domain}] - {setting}",
                             )
 
@@ -232,7 +232,7 @@ def generate_profiles(
                     granular_profile = Payload(
                         identifier=f"mscp.{payload_type}.{setting}",
                         organization=organization,
-                        description=f"Configuration for {payload_type}:{setting} - Created on {date_today}",
+                        description=f"Configuration for {payload_type}:{setting} - Created on {DATE_TODAY}",
                         displayname=f"[{payload_type}] - {setting}",
                     )
                     granular_profile.add_payload(payload_type, {setting: value})

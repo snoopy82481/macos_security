@@ -9,7 +9,7 @@ Jinja filter helpers `group_ulify`, `generate_log_reference`, and
 """
 
 # Standard python modules
-from datetime import date
+import datetime
 from itertools import groupby
 from pathlib import Path
 
@@ -19,13 +19,15 @@ from jinja2 import Environment, FileSystemLoader
 # Local python modules
 from ...classes import Baseline, Macsecurityrule
 from ...common_utils import (
+    NIX_OS,
     create_file,
     logger,
     make_dir,
     mscp_data,
     search_paths,
-    NIX_OS,
 )
+
+DATE_TODAY: datetime.date = datetime.datetime.now(tz=datetime.UTC).date()
 
 
 def group_ulify(elements: list[str]) -> str:
@@ -131,7 +133,7 @@ def generate_audit_plist(
 
         logger.info("Generated default audit plist.")
 
-    except IOError as e:
+    except OSError as e:
         logger.error(f"Error occurred: {e}")
 
 
@@ -181,7 +183,8 @@ def generate_script(
         baseline_name=baseline_name,
         audit_name=audit_name,
         reference_log_id=log_reference,
-        todays_date=date.today().strftime("%Y-%m-%d"),
+        todays_date=DATE_TODAY,
+        # todays_date=DATE_TODAY.strftime("%Y-%m-%d"),
         mscp_release=current_version_data["compliance_version"],
         mscp_version=mscp_data.get("mscp", {}),
     )
@@ -238,7 +241,8 @@ def generate_restore_script(
         baseline_name=baseline_name,
         audit_name=audit_name,
         reference_log_id=log_reference,
-        todays_date=date.today().strftime("%Y-%m-%d"),
+        todays_date=DATE_TODAY,
+        # todays_date=DATE_TODAY.strftime("%Y-%m-%d"),
         mscp_release=current_version_data["compliance_version"],
         mscp_version=mscp_data.get("mscp", {}),
     )
