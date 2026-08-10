@@ -11,11 +11,11 @@ import datetime
 from pathlib import Path
 from typing import Any
 
+# Local python modules
+from ...common_utils import create_json, get_version_data, mscp_data
 
 # Additional python modules
 
-# Local python modules
-from ...common_utils import get_version_data, mscp_data, create_json
 
 # TODO: add proper logging to module
 
@@ -53,12 +53,10 @@ def generate_manifest(build_path: Path, baseline_name: str, baseline) -> None:
         "build": mscp_data["mscp"]["build"],
         "date": mscp_data["mscp"]["build_date"],
     }
-    manifest["plist_location"] = "/Library/Preferences/org.{}.audit.plist".format(
-        baseline_name
-    )
-    manifest["log_location"] = "/Library/Logs/{}_baseline.log".format(baseline_name)
+    manifest["plist_location"] = f"/Library/Preferences/org.{baseline_name}.audit.plist"
+    manifest["log_location"] = f"/Library/Logs/{baseline_name}_baseline.log"
     manifest["creation_date"] = (
-        datetime.datetime.now().replace(microsecond=0).isoformat()
+        datetime.datetime.now(tz=datetime.UTC).replace(microsecond=0).isoformat()
     )
     manifest["rules"] = []
     for profile in baseline.profile:
@@ -68,21 +66,19 @@ def generate_manifest(build_path: Path, baseline_name: str, baseline) -> None:
             rule_manifest["title"] = rule.title
             rule_manifest["discussion"] = rule.discussion
             ref_parts = []
-            # TODO: visit this to properly handle the exception
             for _org, refs in rule.references:
                 if refs:
                     for item in refs:
-                        try:
-                            k, v = item
-                            if v is not None:
-                                vals = ",".join(str(i) for i in v)
-                                if k == "benchmark":
-                                    k = "cis_benchmark"
-                                if k == "controls_v8":
-                                    k = "cis_controls_v8"
-                                ref_parts.append(f"{k}|{vals}")
-                        except ValueError:
+                        if not isinstance(item, tuple) or len(item) != 2:
                             continue
+                        k, v = item
+                        if v is not None:
+                            vals = ",".join(str(i) for i in v)
+                            if k == "benchmark":
+                                k = "cis_benchmark"
+                            if k == "controls_v8":
+                                k = "cis_controls_v8"
+                            ref_parts.append(f"{k}|{vals}")
             rule_manifest["references"] = ";".join(str(x) for x in ref_parts)
             rule_manifest["tags"] = ",".join(str(x) for x in rule.tags)
             if rule.check:
