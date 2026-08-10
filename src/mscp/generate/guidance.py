@@ -19,7 +19,6 @@ from pathlib import Path
 from typing import Any
 
 # Additional python modules
-from ..common_utils import conditional_inject_spinner
 from yaspin.core import Yaspin
 from yaspin.spinners import Spinners
 
@@ -27,6 +26,7 @@ from yaspin.spinners import Spinners
 from ..classes import Baseline
 from ..classes.legacy_baseline import LegacyBaseline
 from ..common_utils import (
+    conditional_inject_spinner,
     config,
     get_version_data,
     logger,
@@ -38,12 +38,12 @@ from ..common_utils import (
 from ..generate.guidance_support import (
     generate_ddm,
     generate_documents,
-    generate_markdown_tree,
     generate_excel,
-    generate_profiles,
-    generate_script,
-    generate_restore_script,
     generate_manifest,
+    generate_markdown_tree,
+    generate_profiles,
+    generate_restore_script,
+    generate_script,
 )
 
 
@@ -67,7 +67,7 @@ def verify_signing_hash(cert_hash: str) -> bool:
 
     cmd: str = f"security cms -SZ {cert_hash} -i {unsigned_tmp_file_path}"
 
-    stdout, error = run_command(cmd, text=False, check=False)
+    _, error = run_command(cmd, text=False, check=False)
 
     unsigned_tmp_file_path.unlink()
 
@@ -190,7 +190,7 @@ def generate_guidance(sp: Yaspin, args: argparse.Namespace) -> None:
     output_basename: str = args.baseline.name
     baseline_name: str = args.baseline.stem
     audit_name: str = str(baseline_name)
-    if not args.language == "en":
+    if args.language != "en":
         build_path: Path = Path(
             config.get("output_dir", ""), f"{baseline_name}_{args.language}"
         )
@@ -216,7 +216,7 @@ def generate_guidance(sp: Yaspin, args: argparse.Namespace) -> None:
     custom_logo = Path(config["custom"]["images_dir"], logo_filename)
 
     if args.logo:
-        logger.info(f"Copying custom logo file {args.logo} to {str(custom_logo)}")
+        logger.info(f"Copying custom logo file {args.logo} to {custom_logo!s}")
         shutil.copy(str(args.logo), str(custom_logo))
 
     logo_path = (
