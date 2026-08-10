@@ -8,7 +8,7 @@ and falls back to a default when the user just presses Enter.
 
 # Standard python modules
 from collections.abc import Sequence
-from typing import Any, Type
+from typing import Any
 
 # Local python modules
 from .logger_instance import logger
@@ -18,7 +18,7 @@ from .logger_instance import logger
 
 def sanitize_input(
     prompt: str,
-    type_: Type[Any] | None = None,
+    type_: type[Any] | None = None,
     range_: Sequence[Any] | None = None,
     default_: Any | None = None,
 ) -> Any:
@@ -27,9 +27,9 @@ def sanitize_input(
 
     Args:
         prompt (str): The input prompt to display to the user.
-        type_ (Type[Any], optional): The type to cast the input to (e.g., int, float, str). Defaults to None.
-        range_ (Iterable[Any], optional): A range or list of acceptable values. Defaults to None.
-        default_ (Any, optional): A default value to use if the user provides no input. Defaults to None.
+        type_ (type[Any] | None, optional): The type to cast the input to (e.g., int, float, str). Defaults to None.
+        range_ (Sequence[Any] | None, optional): A range or list of acceptable values. Defaults to None.
+        default_ (Any | None, optional): A default value to use if the user provides no input. Defaults to None.
 
     Returns:
         Any: The validated and type-cast input.
