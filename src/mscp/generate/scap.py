@@ -69,13 +69,13 @@ def disa_stig_rules(stig_id, stig):
     matches = re.search(regex, stig)
     # SRG
     if matches:
-        newtitle = str(matches.group(1))
+        newtitle = matches.group(1)
 
     regex = rf"Rule id=\"(.*\S)\" we.*.{stig_id}"
     matches = re.search(regex, stig)
     # RuleID
     if matches:
-        newtitle = newtitle + ", " + str(matches.group(1).split("_")[0])
+        newtitle = newtitle + ", " + matches.group(1).split("_")[0]
 
     # srg-123-456. SV-7891234
     return newtitle
@@ -145,7 +145,7 @@ def generate_scap(sp: Yaspin, args: argparse.Namespace) -> None:
 
     if args.baseline == "all_rules":
         for k, v in benchmark_map.items():
-            if list(v)[0].lower() == args.os_name.lower():
+            if next(iter(v)).lower() == args.os_name.lower():
                 all_baseline_benchmark.append(k)
 
         for v in all_tags:
@@ -210,7 +210,7 @@ def generate_scap(sp: Yaspin, args: argparse.Namespace) -> None:
 
                 xccdfProfiles = (
                     xccdfProfiles
-                    + """<select idref="xccdf_gov.nist.mscp.content_rule_{0}_{1}" selected="true"/>""".format(
+                    + """<select idref="xccdf_gov.nist.mscp.content_rule_{}_{}" selected="true"/>""".format(
                         rule["rule_id"], odv_tag
                     )
                 )
@@ -220,14 +220,14 @@ def generate_scap(sp: Yaspin, args: argparse.Namespace) -> None:
     for rule in all_rules:
         if "supplemental" in rule.tags:
             continue
-        if args.baseline != "all_rules":
-            if (
-                not rule_has_benchmark_for_version(
-                    rule, args.baseline, args.os_name, str(args.os_version)
-                )
-                and args.baseline not in rule.tags
-            ):
-                continue
+        if (
+            args.baseline != "all_rules"
+            and not rule_has_benchmark_for_version(
+                rule, args.baseline, args.os_name, str(args.os_version)
+            )
+            and args.baseline not in rule.tags
+        ):
+            continue
 
         xccdf_references = ""
         separator = ", "
@@ -236,7 +236,7 @@ def generate_scap(sp: Yaspin, args: argparse.Namespace) -> None:
             if len(rule["references"].nist.nist_800_53r5) > 0:
                 xccdf_references = (
                     xccdf_references
-                    + """<reference href="https://csrc.nist.gov/publications/detail/sp/800-53/rev-5/final">NIST SP 800-53r5: {0}</reference>""".format(
+                    + """<reference href="https://csrc.nist.gov/publications/detail/sp/800-53/rev-5/final">NIST SP 800-53r5: {}</reference>""".format(
                         separator.join(rule["references"].nist.nist_800_53r5)
                     )
                 )
@@ -249,7 +249,7 @@ def generate_scap(sp: Yaspin, args: argparse.Namespace) -> None:
             if len(rule["references"].nist.nist_800_171r3) > 0:
                 xccdf_references = (
                     xccdf_references
-                    + """<reference href="https://csrc.nist.gov/pubs/sp/800/171/r3/final">NIST SP 800-171r3: {0}</reference>""".format(
+                    + """<reference href="https://csrc.nist.gov/pubs/sp/800/171/r3/final">NIST SP 800-171r3: {}</reference>""".format(
                         separator.join(rule["references"].nist.nist_800_171r3)
                     )
                 )
@@ -275,7 +275,7 @@ def generate_scap(sp: Yaspin, args: argparse.Namespace) -> None:
             if len(rule["references"].cis.benchmark) > 0:
                 xccdf_references = (
                     xccdf_references
-                    + """<reference href="https://www.cisecurity.org/cis-benchmarks/">CIS Benchmark: {0}</reference>""".format(
+                    + """<reference href="https://www.cisecurity.org/cis-benchmarks/">CIS Benchmark: {}</reference>""".format(
                         separator.join(rule["references"].cis.benchmark)
                     )
                 )
@@ -298,15 +298,14 @@ def generate_scap(sp: Yaspin, args: argparse.Namespace) -> None:
             )
         selected_os_benchmark = []
         for benchmark, v in benchmark_map.items():
-            if list(v)[0].lower() == args.os_name.lower():
+            if next(iter(v)).lower() == args.os_name.lower():
                 if args.baseline != "all_rules":
                     if benchmark == args.baseline:
                         selected_os_benchmark.append(benchmark)
                 else:
                     selected_os_benchmark.append(benchmark)
         if args.disa_stig and args.oval and args.baseline == "disa_stig":
-            file = open(args.disa_stig, "r")
-            stig = file.read()
+            stig = open_file(args.disa_stig)
             rule.title = disa_stig_rules(rule.references.get_ref("disa_stig")[0], stig)
         if rule.odv is not None:
             if args.baseline == "all_rules":
@@ -334,20 +333,22 @@ def generate_scap(sp: Yaspin, args: argparse.Namespace) -> None:
                     if " 2> /dev/null" in check_value:
                         check_value = check_value.replace(" 2> /dev/null", "")
 
-                    if "/usr/bin/grep -c" in check_value:
-                        if (
+                    if (
+                        "/usr/bin/grep -c" in check_value
+                        and (
                             'echo "1"' not in check_value
                             or 'echo "0"' not in check_value
-                        ):
-                            if "/usr/bin/ssh -G ." not in check_value:
-                                if "auditd_enabled" not in check_value:
-                                    if "/usr/sbin/sshd -G" not in check_value:
-                                        check_value = check_value.replace(
-                                            "/usr/bin/grep -c ", "/usr/bin/grep "
-                                        )
-                                        count_found = True
-                                        if newrule.result_value == 0:
-                                            check_existence = "none_exist"
+                        )
+                        and "/usr/bin/ssh -G ." not in check_value
+                        and "auditd_enabled" not in check_value
+                        and "/usr/sbin/sshd -G" not in check_value
+                    ):
+                        check_value = check_value.replace(
+                            "/usr/bin/grep -c ", "/usr/bin/grep "
+                        )
+                        count_found = True
+                        if newrule.result_value == 0:
+                            check_existence = "none_exist"
 
                     if "launchctl list" in check_value:
                         check_value = check_value.replace(
@@ -378,12 +379,12 @@ def generate_scap(sp: Yaspin, args: argparse.Namespace) -> None:
                         rule.severity = "unknown"
                     xccdfrules = (
                         xccdfrules
-                        + """<Rule id="xccdf_gov.nist.mscp.content_rule_{0}_{1}" selected="false" role="full" severity="{2}" weight="1.0"><title>{3}</title><description>{4}
-                {5}
+                        + """<Rule id="xccdf_gov.nist.mscp.content_rule_{}_{}" selected="false" role="full" severity="{}" weight="1.0"><title>{}</title><description>{}
+                {}
 
-                Expected Result: {6}
-                </description>{7}<ident system="https://ncp.nist.gov/cce">{8}</ident><fixtext>        {9}
-                </fixtext>{10}
+                Expected Result: {}
+                </description>{}<ident system="https://ncp.nist.gov/cce">{}</ident><fixtext>        {}
+                </fixtext>{}
                 </Rule>""".format(
                             rule["rule_id"],
                             k,
@@ -474,17 +475,17 @@ def generate_scap(sp: Yaspin, args: argparse.Namespace) -> None:
             if " 2> /dev/null" in check_value:
                 check_value = check_value.replace(" 2> /dev/null", "")
 
-            if "/usr/bin/grep -c" in check_value:
-                if 'echo "1"' not in check_value or 'echo "0"' not in check_value:
-                    if "/usr/bin/ssh -G ." not in check_value:
-                        if "auditd_enabled" not in check_value:
-                            if "/usr/sbin/sshd -G" not in check_value:
-                                check_value = check_value.replace(
-                                    "/usr/bin/grep -c ", "/usr/bin/grep "
-                                )
-                                count_found = True
-                                if rule.result_value == 0:
-                                    check_existence = "none_exist"
+            if (
+                "/usr/bin/grep -c" in check_value
+                and ('echo "1"' not in check_value or 'echo "0"' not in check_value)
+                and "/usr/bin/ssh -G ." not in check_value
+                and "auditd_enabled" not in check_value
+                and "/usr/sbin/sshd -G" not in check_value
+            ):
+                check_value = check_value.replace("/usr/bin/grep -c ", "/usr/bin/grep ")
+                count_found = True
+                if rule.result_value == 0:
+                    check_existence = "none_exist"
 
             if "launchctl list" in check_value:
                 check_value = check_value.replace(
@@ -551,7 +552,7 @@ def generate_scap(sp: Yaspin, args: argparse.Namespace) -> None:
 
                 oval_objects = (
                     oval_objects
-                    + """<shellcommand_object xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent" id="oval:mscp:obj:{0}" version="1" comment="{1}_{2}_object"><shell>zsh</shell><command>{3}</command></shellcommand_object>""".format(
+                    + """<shellcommand_object xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent" id="oval:mscp:obj:{}" version="1" comment="{}_{}_object"><shell>zsh</shell><command>{}</command></shellcommand_object>""".format(
                         oval_counter, rule.rule_id, "recommended", check_value
                     )
                 )
@@ -560,14 +561,14 @@ def generate_scap(sp: Yaspin, args: argparse.Namespace) -> None:
                     if check_existence != "none_exist":
                         oval_states = (
                             oval_states
-                            + """<shellcommand_state xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent" id="oval:mscp:ste:{0}" version="1" comment="{1}_{2}_state"><stdout_line operation="pattern match">.*</stdout_line></shellcommand_state>""".format(
+                            + """<shellcommand_state xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent" id="oval:mscp:ste:{}" version="1" comment="{}_{}_state"><stdout_line operation="pattern match">.*</stdout_line></shellcommand_state>""".format(
                                 oval_counter, rule.rule_id, "recommended"
                             )
                         )
                     else:
                         oval_states = (
                             oval_states
-                            + """<shellcommand_state xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent" id="oval:mscp:ste:{0}" version="1" comment="{1}_{2}_state"><stdout_line check_existence="none_exist" /></shellcommand_state>""".format(
+                            + """<shellcommand_state xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent" id="oval:mscp:ste:{}" version="1" comment="{}_{}_state"><stdout_line check_existence="none_exist" /></shellcommand_state>""".format(
                                 oval_counter, rule.rule_id, "recommended"
                             )
                         )
@@ -575,14 +576,13 @@ def generate_scap(sp: Yaspin, args: argparse.Namespace) -> None:
                 else:
                     oval_states = (
                         oval_states
-                        + """<shellcommand_state xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent" id="oval:mscp:ste:{0}" version="1" comment="{1}_{2}state"><stdout_line operation="equals">{3}</stdout_line></shellcommand_state>""".format(
+                        + """<shellcommand_state xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent" id="oval:mscp:ste:{}" version="1" comment="{}_{}state"><stdout_line operation="equals">{}</stdout_line></shellcommand_state>""".format(
                             oval_counter, rule.rule_id, "recommended", rule.result_value
                         )
                     )
         oval_counter += 1
 
-    now = datetime.now()
-    date_time_string = now.strftime("%Y-%m-%dT%H:%M:%S")
+    date_time_string: str = datetime.datetime.now().isoformat(timespec="seconds")
 
     xccdf = """<?xml version="1.0" encoding="UTF-8"?>"""
     xccdfPrefix = """<Benchmark xmlns="http://checklists.nist.gov/xccdf/1.2" id="xccdf_gov.nist.mscp.content_benchmark_{1}_{2}" style="SCAP_1.4" resolved="true" xml:lang="en"><status date="{3}">draft</status><title>{1} {2}: Security Configuration</title><description>{1} {2}: Security Configuration</description><reference href="https://csrc.nist.gov/projects/security-content-automation-protocol/scap-releases/scap-1-3"><title xmlns="http://purl.org/dc/elements/1.1/">Security Content Automation Protocol</title><publisher xmlns="http://purl.org/dc/elements/1.1/">National Institute of Standards and Technology</publisher></reference><version time="{0}" update="https://github.com/usnistgov/macos_security">{4}</version><metadata><creator xmlns="http://purl.org/dc/elements/1.1/">National Institute of Standards and Technology</creator><publisher xmlns="http://purl.org/dc/elements/1.1/">National Institute of Standards and Technology</publisher><source xmlns="http://purl.org/dc/elements/1.1/">https://github.com/usnistgov/macos_security/releases/latest</source><contributor xmlns="http://purl.org/dc/elements/1.1/">Bob Gendler - National Institute of Standards and Technology</contributor><contributor xmlns="http://purl.org/dc/elements/1.1/">Dan Brodjieski - National Aeronautics and Space Administration</contributor><contributor xmlns="http://purl.org/dc/elements/1.1/">Allen Golbig - Jamf</contributor></metadata>""".format(
