@@ -15,10 +15,10 @@ import gettext
 import re
 import sys
 import time
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from itertools import groupby
 from pathlib import Path
-from typing import Any, Sequence, Dict, List
+from typing import Any
 
 # Additional python modules
 from jinja2 import Environment, FileSystemLoader, Template
@@ -29,13 +29,13 @@ from yaspin.spinners import Spinners
 from ...classes import Baseline
 from ...classes.mobileconfig import mobileconfig_info_to_xml
 from ...common_utils import (
+    NIX_OS,
     config,
     logger,
     mscp_data,
     open_file,
     run_command,
     search_paths,
-    NIX_OS,
 )
 
 
@@ -101,7 +101,7 @@ def extract_from_title(title: str) -> str:
     )
 
 
-def render_references(reference_set: Sequence[Dict[str, Any]]) -> str:
+def render_references(reference_set: Sequence[dict[str, Any]]) -> str:
     """Convert a sequence of dicts into AsciiDoc table rows (no header, no ``|===``).
 
     Args:
@@ -119,9 +119,9 @@ def render_references(reference_set: Sequence[Dict[str, Any]]) -> str:
         s = str(text)
         return s.replace("|", r"\|")
 
-    rows: List[List[str]] = []
+    rows: list[list[str]] = []
 
-    def _walk(path: List[str], value: Any) -> None:
+    def _walk(path: list[str], value: Any) -> None:
         if isinstance(value, (list, tuple)):
             # Join list elements; str() for non-scalar reference_set
             joined = "\n- ".join(map(str, value))
@@ -133,7 +133,7 @@ def render_references(reference_set: Sequence[Dict[str, Any]]) -> str:
     for d in reference_set:
         if not isinstance(d, dict):
             raise TypeError("All elements of 'reference_set' must be dictionaries.")
-        for k in d.keys():
+        for k in d:
             _walk([str(k)], d[k])
 
     if not rows:
@@ -238,8 +238,9 @@ def asciidoc_to_markdown(value: str) -> str:
         line = lines[i].rstrip()
 
         # Header: == -> ##, === -> ###, etc.
-        if re.match(r"^(=+)\s+.+", line):
-            level, content = re.match(r"^(=+)\s+(.+)", line).groups()
+        header_match = re.match(r"^(=+)\s+(.+)", line)
+        if header_match:
+            level, content = header_match.groups()
             result.append(f"{'#' * len(level)} {content}")
 
         # NOTE block
@@ -320,8 +321,8 @@ def asciidoc_to_markdown(value: str) -> str:
             pass
 
         # Handle AsciiDoc block titles like `.Some Title`
-        elif re.match(r"^\.(?!\d+\s)(.+)$", line):
-            block_title = re.match(r"^\.(.+)$", line).group(1).strip()
+        elif m := re.match(r"^\.(?!\d+\s)(.+)$", line):
+            block_title = m.group(1).strip()
             result.append(f"**{block_title}**")
 
         # Unordered List (* -> -)
@@ -462,7 +463,9 @@ def render_template(
     env.filters["render_references"] = render_references
     env.filters["get_nested"] = get_nested
     env.filters["mobileconfig_payloads_to_xml"] = mobileconfig_info_to_xml
-    env.install_gettext_translations(translations)
+    install_gettext = getattr(env, "install_gettext_translations", None)
+    if install_gettext is not None:
+        install_gettext(translations)
 
     if output_format == "markdown":
         env.filters["group_ulify"] = group_ulify_md
@@ -596,15 +599,13 @@ def generate_documents(
         spinner.spinner = Spinners.dots
         spinner.text = "Checking for asciidoctor components"
         time.sleep(1)
-        asciidoctor_path, asciidoctor_err = run_command("bundle show asciidoctor")
-        asciidoctor_pdf_path, asciidoctor_pdf_err = run_command(
-            "bundle show asciidoctor-pdf"
-        )
+        _, asciidoctor_err = run_command("bundle show asciidoctor")
+        _, asciidoctor_pdf_err = run_command("bundle show asciidoctor-pdf")
 
         if asciidoctor_err or asciidoctor_pdf_err:
             spinner.text = "Installing missing asciidoctor components"
             time.sleep(1)
-            output, error = run_command(
+            _, error = run_command(
                 "bundle install --gemfile Gemfile --path mscp_gems --binstubs"
             )
             if error:
@@ -612,12 +613,12 @@ def generate_documents(
                 sys.exit()
         spinner.text = "Generating HTML file from adoc"
         time.sleep(1)
-        output, error = run_command(f"bundle exec asciidoctor '{output_file}'")
+        _, error = run_command(f"bundle exec asciidoctor '{output_file}'")
         if error:
             logger.error(f"Error converting to ADOC: {error}")
             sys.exit()
         spinner.text = "Generating PDF file from adoc"
-        output, error = run_command(f"bundle exec asciidoctor-pdf '{output_file}'")
+        _, error = run_command(f"bundle exec asciidoctor-pdf '{output_file}'")
         if error:
             logger.error(f"Error converting to ADOC: {error}")
             sys.exit()
