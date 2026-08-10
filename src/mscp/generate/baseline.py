@@ -12,9 +12,7 @@ import argparse
 import sys
 from collections import defaultdict
 from pathlib import Path
-from typing import Any
 
-from ..common_utils import conditional_inject_spinner
 from yaspin.core import Yaspin
 from yaspin.spinners import Spinners
 
@@ -23,6 +21,7 @@ from ..classes import Author, Baseline, Macsecurityrule
 from ..classes.legacy_baseline import LegacyBaseline
 from ..classes.rule_library import RuleLibrary
 from ..common_utils import (
+    conditional_inject_spinner,
     config,
     logger,
     make_dir,
@@ -74,7 +73,7 @@ def collect_tags_and_benchmarks(
 
 def collect_established_benchmarks(
     rules: list[Macsecurityrule],
-) -> list[str]:
+) -> tuple[str, ...]:
     """
     Attempts to collect all established benchmarks in the MSCP library. An established
     benchmark is one where an ODV has been defined for a given benchmark.
@@ -83,7 +82,7 @@ def collect_established_benchmarks(
        rules (list[Macsecurityrule]): A list of collected rules from the library.
 
     Returns:
-        list: A sorted set of discovered benchmarks
+        tuple: A sorted set of discovered benchmarks
     """
     established_benchmarks_set: set[str] = set()
 
@@ -92,10 +91,9 @@ def collect_established_benchmarks(
             established_benchmarks_set.add(odv)
 
     # remove "hint" from available benchmarks
-    if "hint" in established_benchmarks_set:
-        established_benchmarks_set.remove("hint")
+    established_benchmarks_set.discard("hint")
 
-    return sorted(established_benchmarks_set)
+    return tuple(sorted(established_benchmarks_set))
 
 
 def print_keyword_summary(
@@ -389,14 +387,25 @@ def generate_baseline(
     if any(bm in args.keyword for bm in established_benchmarks):
         benchmark = args.keyword
 
-    authors_dict: dict[str, Any] = mscp_data.get("authors", {})
+    authors_data = mscp_data.get("authors", [])
+    if isinstance(authors_data, dict):
+        authors_data = list(authors_data.values())
 
     authors: list[Author] = []
-    for author in authors_dict:
-        if "mscp" in author["benchmarks"] or args.keyword in author["benchmarks"]:
-            normalized_authors = author if isinstance(author, list) else [author]
+    for author in authors_data:
+        normalized_authors = author if isinstance(author, list) else [author]
 
-            for each_author in normalized_authors:
+        for each_author in normalized_authors:
+            if not isinstance(each_author, dict):
+                continue
+
+            benchmarks = each_author.get("benchmarks", [])
+            if isinstance(benchmarks, str):
+                benchmarks = [benchmarks]
+            if not isinstance(benchmarks, list):
+                continue
+
+            if "mscp" in benchmarks or args.keyword in benchmarks:
                 authors.append(Author(**each_author))
 
     if args.tailor:
