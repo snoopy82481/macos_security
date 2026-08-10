@@ -10,15 +10,15 @@ language subdirectories under ``config["locales_dir"]``.
 
 # Standard python modules
 import gettext
-import yaml
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 # Local python modules
 from .config import config
-from .logger_instance import logger
 from .file_handling import open_file
-
+from .logger_instance import logger
 
 # Global variable to store the gettext localization function
 _localization_function = gettext.gettext
@@ -46,7 +46,7 @@ def setup_gettext_localization(language: str = "en") -> None:
         _localization_function = localization.gettext
         logger.debug(f"Gettext configured for language: {language}, domain: {domain}")
 
-    except Exception as e:
+    except (FileNotFoundError, OSError) as e:
         logger.warning(f"Failed to setup gettext for language {language}: {e}")
         # Fallback to default gettext behavior
         _localization_function = gettext.gettext
@@ -169,9 +169,7 @@ def get_language_data(
     Returns:
         dict[str, Any]: Parsed YAML contents, or ``{}`` on error.
     """
-    language_file = Path(
-        config["locales_dir"], language, category
-    ).with_suffix(".yaml")
+    language_file = Path(config["locales_dir"], language, category).with_suffix(".yaml")
 
     try:
         logger.info("Attempting to open language file: {}", language_file)
@@ -183,6 +181,6 @@ def get_language_data(
         logger.error("language file not found: {}", language_file)
         return {}
 
-    except Exception as e:
+    except (yaml.YAMLError, OSError, UnicodeDecodeError) as e:
         logger.error("Error parsing language file: {}", e)
         return {}
