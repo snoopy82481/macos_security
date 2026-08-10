@@ -19,12 +19,12 @@ from .payload import Payload
 from .rule_library import RuleLibrary
 
 __all__ = [
+    "Author",
     "Baseline",
     "LegacyBaseline",
     "LegacyProfile",
     "Macsecurityrule",
     "Payload",
-    "Author",
     "Profile",
     "RuleLibrary",
     "Sectionmap",

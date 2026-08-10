@@ -22,7 +22,7 @@ from ..common_utils import config, create_yaml, open_file, search_paths
 from ..common_utils.logger_instance import logger
 from .macsecurityrule import Macsecurityrule
 
-__all__ = ["Author", "Profile", "Baseline"]
+__all__ = ["Author", "Baseline", "Profile"]
 
 
 class Author(BaseModel):
@@ -297,9 +297,7 @@ class Baseline(BaseModel):
             section_data: dict = open_file(yaml_file, language)
             # Ensure the dict key is always a string (avoid None)
             section_name: str = section_data.get("name", "") or ""
-            section_descriptions[section_name] = section_data.get(
-                "description", ""
-            )
+            section_descriptions[section_name] = section_data.get("description", "")
 
         for rule in rules:
             matched: bool = False
