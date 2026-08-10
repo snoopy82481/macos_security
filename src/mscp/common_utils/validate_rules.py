@@ -16,6 +16,7 @@ import sys
 from pathlib import Path
 
 from jsonschema import Draft202012Validator
+from jsonschema import exceptions as jsonschema_exceptions
 
 # Local python modules
 from . import SCHEMA_PATH, config, open_file
@@ -87,7 +88,9 @@ def validate_odv_benchmarks(data: dict) -> list:
 
     benchmark_names = get_benchmark_names(data.get("platforms", {}))
     unknown_keys = sorted(
-        key for key in odv if key not in ("hint", "recommended") and key not in benchmark_names
+        key
+        for key in odv
+        if key not in ("hint", "recommended") and key not in benchmark_names
     )
 
     return [
@@ -143,7 +146,9 @@ def validate_yaml_file(args: argparse.Namespace) -> None:
 
         try:
             errors = list(validator.iter_errors(data))
-        except Exception as e:
+        except (jsonschema_exceptions.SchemaError, TypeError, AttributeError) as e:
+            # SchemaError: problem with the loaded schema
+            # TypeError/AttributeError: malformed data that breaks validation iteration
             print(f"⚠️ ERROR:   {yaml} → {e}")
             logger.error(f"⚠️ ERROR:   {yaml} → {e}")
             continue

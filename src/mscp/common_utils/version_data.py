@@ -85,6 +85,6 @@ def get_version_data(
 
     except ValueError:
         raise
-    except Exception as e:
+    except KeyError as e:
         logger.error("Error parsing mscp_data file: {}", e)
         return {}
