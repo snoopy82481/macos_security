@@ -76,7 +76,6 @@ from .documents import (
     replace_include_with_file_content,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -278,7 +277,10 @@ def _build_env(template_dirs: list[str], language: str) -> Environment:
     # Registered for template compatibility; whole-page escaping is done in
     # Python rather than per-field to ensure complete coverage.
     env.filters["mdx_escape"] = mdx_escape
-    env.install_gettext_translations(translations)
+    # Some type checkers / jinja2 versions may not expose
+    # install_gettext_translations as a known attribute. Use
+    # getattr with a no-op fallback to avoid attribute errors.
+    getattr(env, "install_gettext_translations", lambda t: None)(translations)
     return env
 
 
