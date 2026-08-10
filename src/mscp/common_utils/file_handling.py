@@ -2,25 +2,27 @@
 
 # Standard python modules
 import csv
-import json
-import plistlib
-from pathlib import Path
-from typing import Any, Iterable
 
 # Additional python modules
 import gettext
+import json
+import plistlib
+from collections.abc import Iterable
+from pathlib import Path
+from typing import Any
+
 import yaml
 
 # Local python modules
 from .logger_instance import logger
-
 
 ENCODING: str = "utf-8"
 
 
 class MyDumper(yaml.Dumper):
     def increase_indent(self, flow=False, indentless=False):
-        return super(MyDumper, self).increase_indent(flow, False)
+        # `indentless` is intentionally ignored to preserve block indentation style.
+        return super().increase_indent(flow, False)
 
 
 def _str_presenter(dumper, data):
@@ -90,7 +92,7 @@ def open_text(file_path: Path) -> str:
 
 def open_yaml(
     file_path: Path,
-    language: str = None,
+    language: str | None = None,
 ) -> dict[str, Any]:
     """
     Attempts to open a yaml file and read its contents with error checking and logging.
@@ -108,10 +110,14 @@ def open_yaml(
     domain: str = "messages"
     localedir: str = str(Path(__file__).parent.parent / "data" / "locales")
 
+    # build languages argument only if a language was provided to avoid
+    # passing a list containing None which is rejected by type checkers
+    languages_arg: list[str] | None = [language] if language is not None else None
+
     t = gettext.translation(
         domain,
         localedir=localedir,
-        languages=[language],
+        languages=languages_arg,
         fallback=True,
     )
     t.install()
@@ -366,7 +372,7 @@ def create_text(file_path: Path, data: str, append: bool = False) -> None:
     """
     try:
         file_path.write_text(data, encoding=ENCODING)
-    except IOError as e:
+    except OSError as e:
         logger.error(
             "An error occurred while opening the file: {}. Error: {}", file_path, e
         )
