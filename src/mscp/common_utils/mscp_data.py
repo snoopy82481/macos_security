@@ -44,7 +44,7 @@ def get_mscp_data() -> dict[str, Any]:
         logger.error("mscp_data file not found: {}", mscp_data_file)
         return {}
 
-    except Exception as e:
+    except (OSError, ValueError) as e:
         logger.error("Error parsing mscp_data file: {}", e)
         return {}
 
