@@ -9,7 +9,9 @@ the wrapped function with a no-op shim so calls like `sp.ok()` and
 """
 
 import functools
+
 from yaspin import yaspin
+
 from . import logging_config
 
 
