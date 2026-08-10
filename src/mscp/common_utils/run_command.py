@@ -71,4 +71,4 @@ def run_command(
         logger.error("OS error when running command: {}", command)
         logger.error("OS error when running command: {}, Error: {}", command, str(e))
 
-        return None, f"OS error occurred: {str(e)}"
+        return None, f"OS error occurred: {e!s}"
