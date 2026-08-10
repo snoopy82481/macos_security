@@ -8,11 +8,11 @@ from section YAML, Jinja templates, and rule strings) and `generate_mo_from_json
 
 import argparse
 import json
-from pathlib import Path
 import re
+from pathlib import Path
 
+from babel.messages import mofile, pofile
 from babel.messages.catalog import Catalog
-from babel.messages import pofile, mofile
 
 from ..classes import Macsecurityrule
 from ..common_utils import config, open_file
@@ -32,12 +32,12 @@ def extract_trans_text(template: str) -> list[str]:
         list[str]: Unique non-empty translatable strings found in the template.
     """
     pattern = r"{%\s*trans\b.*?%}(.*?){%\s*endtrans\s*%}"
-    chunks = re.findall(pattern, template, flags=re.S)
+    chunks = re.findall(pattern, template, flags=re.DOTALL)
 
     cleaned = set()
     for chunk in chunks:
         # 2) Remove any {{ ... }} template expressions
-        chunk = re.sub(r"{{.*?}}", "", chunk, flags=re.S)
+        chunk = re.sub(r"{{.*?}}", "", chunk, flags=re.DOTALL)
         # 3) Remove leading table pipe markers on each line
         chunk = re.sub(r"(?m)^\s*\|\s*", "", chunk)
         # 4) Normalize whitespace
@@ -87,9 +87,7 @@ def generate_localize_template(args: argparse.Namespace) -> None:
     for template_file in Path(config["templates_dir"]).rglob("*.jinja"):
         template_data: str = open_file(template_file)
         strings_to_include = extract_trans_text(template_data)
-        ctr = 0
-        for string in strings_to_include:
-            ctr += 1
+        for ctr, string in enumerate(strings_to_include, start=1):
             catalog.add(
                 id=string,
                 string=None,
