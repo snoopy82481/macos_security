@@ -17,24 +17,25 @@ from uuid import uuid4
 # Additional python modules
 from pydantic import Field, ValidationError, field_validator
 
-# Local python modules
-from ._base import BaseModelWithAccessors
-from .enforcement_info import EnforcementInfo
-from .mobileconfig import Mobileconfigpayload, format_payload
-from .odv import OdvHint
-from .references import References
 from ..common_utils import (
+    collect_overrides,
     config,
     create_yaml,
     get_version_data,
     make_dir,
     mscp_data,
     open_file,
-    sanitize_input,
     prompt_for_odv,
-    collect_overrides,
+    sanitize_input,
 )
 from ..common_utils.logger_instance import logger
+
+# Local python modules
+from ._base import BaseModelWithAccessors
+from .enforcement_info import EnforcementInfo
+from .mobileconfig import Mobileconfigpayload, format_payload
+from .odv import OdvHint
+from .references import References
 
 
 def deep_merge(a, b, preferred_key=None):

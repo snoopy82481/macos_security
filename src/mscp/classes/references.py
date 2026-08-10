@@ -4,7 +4,8 @@ Defines the per-framework reference submodels (NIST, DISA, CIS, BSI, BZK,
 HHS, custom) and the top-level ``References`` container that groups them.
 """
 
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 
 from pydantic import ConfigDict
 
@@ -253,12 +254,15 @@ class References(BaseModelWithAccessors):
                 return {k.lower(): v for k, v in d.items()}
             return d
 
-        if key == "800-53r5":
-            key = "nist_800_53r5"
-        if key == "800-171r3":
-            key = "nist_800_171r3"
-        if key == "cis":
-            key = "benchmark"
+        # normalize a few common short names to their attribute names
+        if isinstance(key, str):
+            match key.lower():
+                case "800-53r5":
+                    key = "nist_800_53r5"
+                case "800-171r3":
+                    key = "nist_800_171r3"
+                case "cis":
+                    key = "benchmark"
 
         if "." in key:
             ns, field = key.split(".", 1)

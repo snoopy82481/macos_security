@@ -11,7 +11,7 @@ methods to load baselines from YAML and write them back out.
 # Standard python modules
 from collections import OrderedDict, defaultdict
 from pathlib import Path
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar
 
 # Additional python modules
 import pandas as pd
@@ -38,7 +38,7 @@ class Author(BaseModel):
 
     name: str | None
     organization: str | None
-    additional: Optional[bool] = None
+    additional: bool | None = None
 
     @property
     def is_additional(self) -> bool:
@@ -295,7 +295,9 @@ class Baseline(BaseModel):
 
         for yaml_file in Path(config["sections_dir"]).glob("*.y*ml"):
             section_data: dict = open_file(yaml_file, language)
-            section_descriptions[section_data.get("name")] = section_data.get(
+            # Ensure the dict key is always a string (avoid None)
+            section_name: str = section_data.get("name", "") or ""
+            section_descriptions[section_name] = section_data.get(
                 "description", ""
             )
 
@@ -308,7 +310,8 @@ class Baseline(BaseModel):
                     break
 
             if not matched:
-                grouped_rules[rule.section].append(rule)
+                section_name: str = rule.section or ""
+                grouped_rules[section_name].append(rule)
 
         for section in grouped_rules:
             grouped_rules[section] = sorted(

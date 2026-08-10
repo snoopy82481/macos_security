@@ -9,11 +9,10 @@ and OS with method chaining.
 from __future__ import annotations
 
 import re
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator
 
 from .macsecurityrule import Macsecurityrule
-
 
 # ------------------------------------------------------------------
 # File-level text patching helpers
@@ -371,8 +370,12 @@ class RuleLibrary:
         Returns:
             RuleLibrary: Matching rules in their original order.
         """
+        if mechanism is None or not isinstance(mechanism, str):
+            raise TypeError("mechanism must be a str")
         lower = mechanism.lower()
-        return RuleLibrary([r for r in self._rules if r.mechanism.lower() == lower])
+        return RuleLibrary(
+            [r for r in self._rules if (r.mechanism or "").lower() == lower]
+        )
 
     def by_benchmark(self, benchmark: str) -> RuleLibrary:
         """Return a new library containing only rules that belong to the given benchmark.

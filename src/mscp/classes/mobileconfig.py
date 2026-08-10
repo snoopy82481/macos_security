@@ -3,10 +3,9 @@
 from typing import Any
 
 from lxml import etree
+from pydantic import Field
 
 from ._base import BaseModelWithAccessors
-
-from pydantic import Field
 
 
 class Mobileconfigpayload(BaseModelWithAccessors):
