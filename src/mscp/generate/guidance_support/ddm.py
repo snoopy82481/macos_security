@@ -17,12 +17,12 @@ from typing import Any
 # Local python modules
 from ...classes import Baseline, Macsecurityrule
 from ...common_utils import (
+    APPLE_OS,
     append_text,
     logger,
     make_dir,
     mscp_data,
     remove_dir,
-    APPLE_OS,
 )
 
 
@@ -62,7 +62,7 @@ def zip_directory(zip_path: Path, folder_path: Path) -> None:
         with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
             for file_path in folder_path.rglob("*"):
                 zipf.write(file_path, arcname=file_path.relative_to(folder_path))
-    except IOError as e:
+    except OSError as e:
         logger.error(f"Unable to create zip file for {folder_path}. Error: {e}.")
         return
 
@@ -158,7 +158,7 @@ def generate_ddm(build_path: Path, baseline: Baseline, baseline_name: str) -> No
             ddm_dict[declaration_type][ddm_key] = ddm_value
 
     sha256_hash = hashlib.sha256()
-    for ddm_type in ddm_dict.keys():
+    for ddm_type in ddm_dict:
         if "files" in ddm_type:
             for service in mscp_data.get("ddm", {}).get("services", {}):
                 logger.debug(f"Service Name: {service}")
