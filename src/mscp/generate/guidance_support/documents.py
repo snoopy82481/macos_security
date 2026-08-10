@@ -16,11 +16,11 @@ import gettext
 import re
 import shutil
 import sys
+from collections.abc import Callable, Mapping, Sequence
 from html import escape as html_escape
-from collections.abc import Callable, Mapping
 from itertools import groupby
 from pathlib import Path
-from typing import Any, Sequence, Dict
+from typing import Any
 
 # Additional python modules
 from jinja2 import Environment, FileSystemLoader, Template
@@ -28,17 +28,16 @@ from jinja2 import Environment, FileSystemLoader, Template
 # Local python modules
 from ...classes import Baseline
 from ...classes.mobileconfig import mobileconfig_info_to_xml
-from .ddm import ddm_info_to_json
-
 from ...common_utils import (
+    NIX_OS,
     config,
     logger,
     mscp_data,
-    remove_file,
     open_file,
+    remove_file,
     search_paths,
-    NIX_OS,
 )
+from .ddm import ddm_info_to_json
 
 
 def group_ulify(elements: list[str]) -> str:
@@ -137,7 +136,7 @@ def render_references(reference_set) -> str:
                     "<td>" + "<br />".join([f"- {item}" for item in value]) + "</td>"
                 )
             else:
-                joined = f"<td>- {str(value)}</td>"
+                joined = f"<td>- {value!s}</td>"
             lines.append(f"{joined}</tr>")
     return f"{''.join(lines)}" if lines else ""
 
@@ -252,7 +251,7 @@ def render_rules_typst(rule_set: list[str] | None) -> str:
     return "\n".join(f"- {typst_escape(rule)}" for rule in rule_set)
 
 
-def render_references_typst(reference_set: Sequence[Dict[str, Any]]) -> str:
+def render_references_typst(reference_set: Sequence[dict[str, Any]]) -> str:
     """`render_references` for Typst: flatten dicts to escaped bullet lines.
 
     Args:
@@ -272,7 +271,7 @@ def render_references_typst(reference_set: Sequence[Dict[str, Any]]) -> str:
             if isinstance(value, (list, tuple)):
                 joined = "\n".join([f"- {item}" for item in value])
             else:
-                joined = f"- {str(value)}"
+                joined = f"- {value!s}"
             lines.append(f"[*{typst_escape(key)}*], [{typst_escape(joined)}],")
     return "\n".join(lines)
 
@@ -687,7 +686,7 @@ def render_rules_html(rule_set: list[str] | None) -> str:
     return f'<ul class="ulist"><ul>{items}</ul></ul>'
 
 
-def render_references_html(reference_set: Sequence[Dict[str, Any]]) -> str:
+def render_references_html(reference_set: Sequence[dict[str, Any]]) -> str:
     """`render_references` for HTML: ``<ul>`` of ``key: value`` bullets."""
     lines: list[str] = []
     for d in reference_set:
@@ -1015,8 +1014,9 @@ def asciidoc_to_markdown(value: str) -> str:
         line = lines[i].rstrip()
 
         # Header: == -> ##, === -> ###, etc.
-        if re.match(r"^(=+)\s+.+", line):
-            level, content = re.match(r"^(=+)\s+(.+)", line).groups()
+        header_match = re.match(r"^(=+)\s+(.+)", line)
+        if header_match:
+            level, content = header_match.groups()
             result.append(f"{'#' * len(level)} {content}")
 
         # NOTE block
@@ -1091,8 +1091,8 @@ def asciidoc_to_markdown(value: str) -> str:
             pass
 
         # Handle AsciiDoc block titles like `.Some Title`
-        elif re.match(r"^\.(?!\d+\s)(.+)$", line):
-            block_title = re.match(r"^\.(.+)$", line).group(1).strip()
+        elif m := re.match(r"^\.(?!\d+\s)(.+)$", line):
+            block_title = m.group(1).strip()
             result.append(f"**{block_title}**")
 
         # Unordered List (* -> -)
