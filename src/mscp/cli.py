@@ -11,38 +11,38 @@ function in `mscp.generate` or `mscp.admin_utils`.
 # Standard python modules
 import argparse
 import json
-import sys
 import platform
+import sys
 from datetime import datetime
 from pathlib import Path
 
 # Local python modules
 from .admin_utils import (
-    build_all_baselines,
     add_new_rule,
+    build_all_baselines,
     generate_mscp_banners,
     remove_mscp_apple_release,
     update_mscp_apple_release,
     update_mscp_release,
 )
 from .common_utils import (
-    logger,
-    set_logger,
-    validate_yaml_file,
-    get_supported_languages,
-    mscp_data,
     config,
     ensure_custom_dirs,
+    get_supported_languages,
+    logger,
+    mscp_data,
     set_custom_dir,
+    set_logger,
     validate_rule_folder_structure,
+    validate_yaml_file,
 )
 from .generate import (
     generate_baseline,
     generate_guidance,
-    generate_mapping,
-    generate_scap,
     generate_localize_template,
+    generate_mapping,
     generate_mo_from_json,
+    generate_scap,
 )
 
 
@@ -179,7 +179,7 @@ def validate_file(arg: str) -> Path | None:
         sys.exit()
 
 
-def valid_date(date_str):
+def valid_date(date_str: str) -> str:
     try:
         datetime.strptime(date_str, "%Y-%m-%d")
         return date_str
@@ -803,7 +803,7 @@ compliance script (e.g. disa_stig, cis.benchmark)
             set_custom_dir(args.custom_dir.expanduser().resolve())
         ensure_custom_dirs()
     except argparse.ArgumentError as e:
-        logger.error("Argument Error: {}", e)
+        logger.error("Argument Error: %s", e)
         parser.print_help()
         sys.exit()
 
@@ -816,7 +816,7 @@ compliance script (e.g. disa_stig, cis.benchmark)
         logger.debug("LOGGING LEVEL: CRITICAL")
 
     if not hasattr(args, "func"):
-        logger.error("Functionality for {} is not implemented yet.", args.subcommand)
+        logger.error("Functionality for %s is not implemented yet.", args.subcommand)
         parser.print_help()
         sys.exit()
 
@@ -832,7 +832,7 @@ compliance script (e.g. disa_stig, cis.benchmark)
         )
         sys.exit()
 
-    if not args.rules_dir == config["rules_dir"]:
+    if args.rules_dir != config["rules_dir"]:
         config["rules_dir"] = args.rules_dir
 
     if args.subcommand == "guidance":
