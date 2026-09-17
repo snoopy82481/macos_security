@@ -9,29 +9,33 @@ OVAL-only outputs are also supported.
 
 # Standard python modules
 import argparse
-import sys
+import base64
 import re
+import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from xml.sax.saxutils import escape
 from xml.dom import minidom
-import base64
+from xml.sax.saxutils import escape
 
-
-# Additional python modules
-from ..common_utils import conditional_inject_spinner, create_file
 from yaspin.core import Yaspin
 from yaspin.spinners import Spinners
 
-
 # Local python modules
 from ..classes import Macsecurityrule, resolve_enforcement_info
-from ..common_utils import config, get_version_data, logger, mscp_data
 
+# Additional python modules
+from ..common_utils import (
+    conditional_inject_spinner,
+    config,
+    create_file,
+    get_version_data,
+    logger,
+    mscp_data,
+)
 from .baseline import (
-    print_keyword_summary,
     collect_tags_and_benchmarks,
+    print_keyword_summary,
     rule_has_benchmark_for_version,
 )
 
@@ -60,14 +64,14 @@ def disa_stig_rules(stig_id, stig):
         str: ``"<SRG-title>, <RuleID-prefix>"`` if both are found; partial or
             empty string otherwise.
     """
-    newtitle = str()
-    regex = r"<title>(SRG.*\d)<\/title>.*.{}".format(stig_id)
+    newtitle = ""
+    regex = rf"<title>(SRG.*\d)<\/title>.*.{stig_id}"
     matches = re.search(regex, stig)
     # SRG
     if matches:
         newtitle = str(matches.group(1))
 
-    regex = r"Rule id=\"(.*\S)\" we.*.{}".format(stig_id)
+    regex = rf"Rule id=\"(.*\S)\" we.*.{stig_id}"
     matches = re.search(regex, stig)
     # RuleID
     if matches:
@@ -174,24 +178,22 @@ def generate_scap(sp: Yaspin, args: argparse.Namespace) -> None:
         baseline_dict = {b: found_rules}
         all_the_baselines.append(baseline_dict)
 
-    xccdfProfiles = str()
-    oval_def = str()
-    oval_tests = str()
-    oval_objects = str()
-    oval_states = str()
+    xccdfProfiles = ""
+    oval_def = ""
+    oval_tests = ""
+    oval_objects = ""
+    oval_states = ""
     oval_counter = 1
 
     sp.text = "Parsing baselines for XCCDF content"
-    time.sleep(.5)
+    time.sleep(0.5)
 
     for baseline in all_the_baselines:
         for b, r in baseline.items():
-            xccdfrules = str()
+            xccdfrules = ""
             xccdfProfiles = (
                 xccdfProfiles
-                + """<Profile id="xccdf_gov.nist.mscp.content_profile_{0}"><title>{0}</title><description>This profile selects all rules tagged as {0}.</description>""".format(
-                    b
-                )
+                + f"""<Profile id="xccdf_gov.nist.mscp.content_profile_{b}"><title>{b}</title><description>This profile selects all rules tagged as {b}.</description>"""
             )
             for rule in r:
                 if "supplemental" in rule.tags:
@@ -227,7 +229,7 @@ def generate_scap(sp: Yaspin, args: argparse.Namespace) -> None:
             ):
                 continue
 
-        xccdf_references = str()
+        xccdf_references = ""
         separator = ", "
 
         try:
@@ -260,7 +262,7 @@ def generate_scap(sp: Yaspin, args: argparse.Namespace) -> None:
             if len(rule["references"].disa.disa_stig) > 0:
                 xccdf_references = (
                     xccdf_references
-                    + """<reference href="https://www.cyber.mil/stigs/downloads/">DISA STIG(s): {0}</reference>""".format(
+                    + """<reference href="https://www.cyber.mil/stigs/downloads/">DISA STIG: {0}</reference>""".format(
                         separator.join(rule["references"].disa.disa_stig)
                     )
                 )
@@ -283,12 +285,17 @@ def generate_scap(sp: Yaspin, args: argparse.Namespace) -> None:
             )
         try:
             if len(rule["references"].cis.controls_v8) > 0:
-                cisv8 = str()
+                cisv8 = ""
                 for cis_ref in rule["references"].cis.controls_v8:
-                    cisv8 = cisv8 + "{}, ".format(cis_ref)
-                xccdf_references = (xccdf_references + """<reference href="https://www.cisecurity.org/controls">CIS Controls V8: {0}</reference>""".format(cisv8[0:-2]))
+                    cisv8 = cisv8 + f"{cis_ref}, "
+                xccdf_references = (
+                    xccdf_references
+                    + f"""<reference href="https://www.cisecurity.org/controls">CIS Controls V8: {cisv8[0:-2]}</reference>"""
+                )
         except (TypeError, KeyError, AttributeError) as e:
-            logger.warning(f"Error when trying to build CIS Controls references for {rule.rule_id}: {e}")
+            logger.warning(
+                f"Error when trying to build CIS Controls references for {rule.rule_id}: {e}"
+            )
         selected_os_benchmark = []
         for benchmark, v in benchmark_map.items():
             if list(v)[0].lower() == args.os_name.lower():
@@ -314,11 +321,9 @@ def generate_scap(sp: Yaspin, args: argparse.Namespace) -> None:
                 check_value = ""
                 count_found = False
                 if k in selected_os_benchmark:
-                    check_content = str()
+                    check_content = ""
                     if args.xccdf is None and args.oval is None:
-                        check_content = """<check system="http://oval.mitre.org/XMLSchema/oval-definitions-5"><check-content-ref href="oval.xml" name="oval:mscp:def:{}"/></check>""".format(
-                            oval_counter
-                        )
+                        check_content = f"""<check system="http://oval.mitre.org/XMLSchema/oval-definitions-5"><check-content-ref href="oval.xml" name="oval:mscp:def:{oval_counter}"/></check>"""
                     newrule._fill_in_odv(k)
                     fix_value = "none" if newrule.fix is None else escape(newrule.fix)
                     check_value = (
@@ -367,8 +372,8 @@ def generate_scap(sp: Yaspin, args: argparse.Namespace) -> None:
                             check_existence = "none_exist"
 
                     if "$CURRENT_USER" in check_value:
-                        check_value = """CURRENT_USER=$(/usr/bin/defaults read /Library/Preferences/com.apple.loginwindow.plist lastUserName)
-{}""".format(check_value)
+                        check_value = f"""CURRENT_USER=$(/usr/bin/defaults read /Library/Preferences/com.apple.loginwindow.plist lastUserName)
+{check_value}"""
                     if rule.severity is None:
                         rule.severity = "unknown"
                     xccdfrules = (
@@ -408,31 +413,23 @@ def generate_scap(sp: Yaspin, args: argparse.Namespace) -> None:
 
                         oval_tests = (
                             oval_tests
-                            + """<shellcommand_test xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent" id="oval:mscp:tst:{0}" version="1" comment="{1}_{2}_test" check_existence="{3}" check="all"><object object_ref="oval:mscp:obj:{0}"/><state state_ref="oval:mscp:ste:{0}"/></shellcommand_test>""".format(
-                                oval_counter, rule.rule_id, k, check_existence
-                            )
+                            + f"""<shellcommand_test xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent" id="oval:mscp:tst:{oval_counter}" version="1" comment="{rule.rule_id}_{k}_test" check_existence="{check_existence}" check="all"><object object_ref="oval:mscp:obj:{oval_counter}"/><state state_ref="oval:mscp:ste:{oval_counter}"/></shellcommand_test>"""
                         )
 
                         oval_objects = (
                             oval_objects
-                            + """<shellcommand_object xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent" id="oval:mscp:obj:{0}" version="1" comment="{1}_{2}_object"><shell>zsh</shell><command>{3}</command></shellcommand_object>""".format(
-                                oval_counter, rule.rule_id, k, check_value
-                            )
+                            + f"""<shellcommand_object xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent" id="oval:mscp:obj:{oval_counter}" version="1" comment="{rule.rule_id}_{k}_object"><shell>zsh</shell><command>{check_value}</command></shellcommand_object>"""
                         )
                         if count_found:
                             if check_existence != "none_exist":
                                 oval_states = (
                                     oval_states
-                                    + """<shellcommand_state xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent" id="oval:mscp:ste:{0}" version="1" comment="{1}_{2}_state"><stdout_line operation="pattern match">.*</stdout_line></shellcommand_state>""".format(
-                                        oval_counter, rule.rule_id, k
-                                    )
+                                    + f"""<shellcommand_state xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent" id="oval:mscp:ste:{oval_counter}" version="1" comment="{rule.rule_id}_{k}_state"><stdout_line operation="pattern match">.*</stdout_line></shellcommand_state>"""
                                 )
                             else:
                                 oval_states = (
                                     oval_states
-                                    + """<shellcommand_state xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent" id="oval:mscp:ste:{0}" version="1" comment="{1}_{2}_state"><stdout_line check_existence="none_exist" /></shellcommand_state>""".format(
-                                        oval_counter, rule.rule_id, k
-                                    )
+                                    + f"""<shellcommand_state xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent" id="oval:mscp:ste:{oval_counter}" version="1" comment="{rule.rule_id}_{k}_state"><stdout_line check_existence="none_exist" /></shellcommand_state>"""
                                 )
 
                         else:
@@ -440,22 +437,23 @@ def generate_scap(sp: Yaspin, args: argparse.Namespace) -> None:
                                 rule.platforms.get("macOS", {}),
                                 str(float(rule.os_version)),
                             )
-                            if "base64" in rule_enforcement_info.get("check", {}).get(
-                                "result", {}
-                            ).keys():
-                                base64_value = base64.b64encode(newrule.result_value.encode("utf-8")).decode("utf-8")
+                            if (
+                                "base64"
+                                in rule_enforcement_info.get("check", {})
+                                .get("result", {})
+                                .keys()
+                            ):
+                                base64_value = base64.b64encode(
+                                    newrule.result_value.encode("utf-8")
+                                ).decode("utf-8")
                                 oval_states = (
                                     oval_states
-                                    + """<shellcommand_state xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent" id="oval:mscp:ste:{0}" version="1" comment="{1}_{2}state"><stdout_line operation="equals">{3}</stdout_line></shellcommand_state>""".format(
-                                        oval_counter, rule.rule_id, k, base64_value
-                                    )
+                                    + f"""<shellcommand_state xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent" id="oval:mscp:ste:{oval_counter}" version="1" comment="{rule.rule_id}_{k}state"><stdout_line operation="equals">{base64_value}</stdout_line></shellcommand_state>"""
                                 )
                             else:
                                 oval_states = (
                                     oval_states
-                                    + """<shellcommand_state xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent" id="oval:mscp:ste:{0}" version="1" comment="{1}_{2}state"><stdout_line operation="equals">{3}</stdout_line></shellcommand_state>""".format(
-                                        oval_counter, rule.rule_id, k, newrule.result_value
-                                    )
+                                    + f"""<shellcommand_state xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent" id="oval:mscp:ste:{oval_counter}" version="1" comment="{rule.rule_id}_{k}state"><stdout_line operation="equals">{newrule.result_value}</stdout_line></shellcommand_state>"""
                                 )
                         oval_counter += 1
         else:
@@ -463,17 +461,15 @@ def generate_scap(sp: Yaspin, args: argparse.Namespace) -> None:
             check_value = "none" if rule.check is None else escape(rule.check)
             check_existence = "all_exist"
             count_found = False
-            check_content = str()
+            check_content = ""
             if args.xccdf is None and args.oval is None:
-                check_content = """<check system="http://oval.mitre.org/XMLSchema/oval-definitions-5"><check-content-ref href="oval.xml" name="oval:mscp:def:{}"/></check>""".format(
-                    oval_counter
-                )
+                check_content = f"""<check system="http://oval.mitre.org/XMLSchema/oval-definitions-5"><check-content-ref href="oval.xml" name="oval:mscp:def:{oval_counter}"/></check>"""
 
                 if "manual" in rule.tags:
                     check_content = """<check system="http://scap.nist.gov/schema/ocil/2"><check-content-ref href="ocil.xml"/></check>"""
             if "$CURRENT_USER" in check_value:
-                check_value = """CURRENT_USER=$(/usr/bin/defaults read /Library/Preferences/com.apple.loginwindow.plist lastUserName)
-{}""".format(check_value)
+                check_value = f"""CURRENT_USER=$(/usr/bin/defaults read /Library/Preferences/com.apple.loginwindow.plist lastUserName)
+{check_value}"""
 
             if " 2> /dev/null" in check_value:
                 check_value = check_value.replace(" 2> /dev/null", "")
@@ -594,14 +590,12 @@ def generate_scap(sp: Yaspin, args: argparse.Namespace) -> None:
         current_version_data["os_name"].replace(" ", "_"),
         current_version_data["os_version"],
         date_time_string.split("T")[0] + "Z",
-        current_version_data["compliance_version"]
+        current_version_data["compliance_version"],
     )
     xccdf_group = """<Group id="xccdf_gov.nist.mscp.content_group_all_rules"><title>All rules</title><description>All the rules</description><warning category="general">The check/fix commands outlined in this section must be run with elevated privileges.</warning>"""
     xccdf_closer = """</Group></Benchmark>"""
     oval = """<?xml version="1.0" encoding="UTF-8"?>"""
-    oval_prefix = """<oval_definitions xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5" xmlns:oval="http://oval.mitre.org/XMLSchema/oval-common-5" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://oval.mitre.org/XMLSchema/oval-definitions-5 https://raw.githubusercontent.com/OVAL-Community/OVAL/master/oval-schemas/oval-definitions-schema.xsd http://oval.mitre.org/XMLSchema/oval-definitions-5#independent https://raw.githubusercontent.com/OVAL-Community/OVAL/master/oval-schemas/independent-definitions-schema.xsd http://oval.mitre.org/XMLSchema/oval-definitions-5#macos https://raw.githubusercontent.com/OVAL-Community/OVAL/master/oval-schemas/macos-definitions-schema.xsd http://oval.mitre.org/XMLSchema/oval-definitions-5#unix https://raw.githubusercontent.com/OVAL-Community/OVAL/master/oval-schemas/unix-definitions-schema.xsd"><generator><oval:schema_version>5.12.1</oval:schema_version><oval:timestamp xmlns:oval="http://oval.mitre.org/XMLSchema/oval-common-5">{}</oval:timestamp><terms_of_use>Copyright (c) 2025, NIST.</terms_of_use><oval:product_name xmlns:oval="http://oval.mitre.org/XMLSchema/oval-common-5">macOS Security Compliance Project</oval:product_name></generator>""".format(
-        date_time_string
-    )
+    oval_prefix = f"""<oval_definitions xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5" xmlns:oval="http://oval.mitre.org/XMLSchema/oval-common-5" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://oval.mitre.org/XMLSchema/oval-definitions-5 https://raw.githubusercontent.com/OVAL-Community/OVAL/master/oval-schemas/oval-definitions-schema.xsd http://oval.mitre.org/XMLSchema/oval-definitions-5#independent https://raw.githubusercontent.com/OVAL-Community/OVAL/master/oval-schemas/independent-definitions-schema.xsd http://oval.mitre.org/XMLSchema/oval-definitions-5#macos https://raw.githubusercontent.com/OVAL-Community/OVAL/master/oval-schemas/macos-definitions-schema.xsd http://oval.mitre.org/XMLSchema/oval-definitions-5#unix https://raw.githubusercontent.com/OVAL-Community/OVAL/master/oval-schemas/unix-definitions-schema.xsd"><generator><oval:schema_version>5.12.1</oval:schema_version><oval:timestamp xmlns:oval="http://oval.mitre.org/XMLSchema/oval-common-5">{date_time_string}</oval:timestamp><terms_of_use>Copyright (c) 2025, NIST.</terms_of_use><oval:product_name xmlns:oval="http://oval.mitre.org/XMLSchema/oval-common-5">macOS Security Compliance Project</oval:product_name></generator>"""
 
     oval_def = "<definitions>" + oval_def + "</definitions>"
 
@@ -641,19 +635,18 @@ def generate_scap(sp: Yaspin, args: argparse.Namespace) -> None:
         )
 
         ocil = """<component id="scap_gov.nist.mscp.content_comp_macOS_{1}_check_2" timestamp="{0}"><ocil xmlns="http://scap.nist.gov/schema/ocil/2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://scap.nist.gov/schema/ocil/2.0 ocil-2.0.xsd"><generator><product_name>Manual Labor</product_name><product_version>1</product_version><schema_version>2.0</schema_version><timestamp>{0}</timestamp></generator><questionnaires><questionnaire id="ocil:gov.nist.mscp.content:questionnaire:1">  <title>Obtain a pass or a fail</title>  <actions>    <test_action_ref>ocil:gov.nist.mscp.content:testaction:1</test_action_ref>  </actions></questionnaire></questionnaires><test_actions><boolean_question_test_action id="ocil:gov.nist.mscp.content:testaction:1" question_ref="ocil:gov.nist.mscp.content:question:1">  <when_true>    <result>PASS</result>  </when_true>  <when_false>    <result>FAIL</result>  </when_false></boolean_question_test_action></test_actions><questions><boolean_question id="ocil:gov.nist.mscp.content:question:1">  <question_text>Do you wish this checklist item to be considered to have passed?</question_text></boolean_question></questions></ocil></component>""".format(
-            date_time_string,
-            current_version_data["os_version"]
+            date_time_string, current_version_data["os_version"]
         )
 
         cpe = """<component id="scap_gov.nist.mscp.content_comp_macOS_{0}_macOS-cpe-dictionary.xml" timestamp="{1}"><?xml-model href="https://scap.nist.gov/schema/cpe/2.3/cpe-dictionary_2.3.xsd" schematypens="http://www.w3.org/2001/XMLSchema" title="CPE XML schema"?><cpe-list xmlns="http://cpe.mitre.org/dictionary/2.0" xmlns:cpe-23="http://scap.nist.gov/schema/cpe-extension/2.3"><generator><product_name>macOS Security Compliance Project</product_name><schema_version>2.3</schema_version><timestamp>{1}</timestamp></generator><cpe-item name="cpe:/{2}"><title xml:lang="en-US">Apple macOS {0}</title><notes xml:lang="en-US">  <note>This CPE Name represents macOS {0}</note></notes><check href="macOS-cpe-oval.xml" system="http://oval.mitre.org/XMLSchema/oval-definitions-5">oval:gov.nist.mscp.content.cpe.oval:def:1</check><cpe-23:cpe23-item name="cpe:2.3:{2}:*:*:*:*:*:*:*"/></cpe-item></cpe-list></component><component id="scap_gov.nist.mscp.content_comp_macOS_{0}_macOS-cpe-oval.xml" timestamp="{1}"><oval_definitions xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5" xmlns:oval="http://oval.mitre.org/XMLSchema/oval-common-5" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://oval.mitre.org/XMLSchema/oval-definitions-5 https://raw.githubusercontent.com/OVAL-Community/OVAL/master/oval-schemas/oval-definitions-schema.xsd http://oval.mitre.org/XMLSchema/oval-definitions-5#independent https://raw.githubusercontent.com/OVAL-Community/OVAL/master/oval-schemas/independent-definitions-schema.xsd http://oval.mitre.org/XMLSchema/oval-definitions-5#macos https://raw.githubusercontent.com/OVAL-Community/OVAL/master/oval-schemas/macos-definitions-schema.xsd http://oval.mitre.org/XMLSchema/oval-definitions-5#unix https://raw.githubusercontent.com/OVAL-Community/OVAL/master/oval-schemas/unix-definitions-schema.xsd"><generator><oval:product_name>macOS Security Compliance Project</oval:product_name><oval:schema_version>5.12.1</oval:schema_version><oval:timestamp>{1}</oval:timestamp></generator><definitions><definition id="oval:gov.nist.mscp.content.cpe.oval:def:1" version="1" class="inventory">  <metadata>    <title>Apple macOS {0} is installed</title>    <affected family="macos">      <platform>macOS</platform>    </affected>    <reference source="CPE" ref_id="cpe:/{2}"/>    <description>The operating system installed on the system is Apple macOS ({0}).</description>  </metadata>  <criteria operator="AND">    <criterion comment="The Installed Operating System is Part of the Mac OS Family" test_ref="oval:gov.nist.mscp.content.cpe:tst:1"/>    <criterion comment="Apple macOS version is greater than or equal to {0}" test_ref="oval:gov.nist.mscp.content.cpe:tst:2"/>  </criteria></definition></definitions><tests><family_test xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent" check="all" check_existence="only_one_exists" comment="The Installed Operating System is Part of the macOS Family" id="oval:gov.nist.mscp.content.cpe:tst:1" version="1">  <object object_ref="oval:gov.nist.mscp.content.cpe:obj:1"/>  <state state_ref="oval:gov.nist.mscp.content.cpe:ste:1"/></family_test><plist511_test xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#macos" check="all" check_existence="only_one_exists" comment="Apple macOS version is greater than {0}" id="oval:gov.nist.mscp.content.cpe:tst:2" version="2">  <object object_ref="oval:gov.nist.mscp.content.cpe:obj:2"/>  <state state_ref="oval:gov.nist.mscp.content.cpe:ste:2"/></plist511_test></tests><objects><family_object xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent" id="oval:gov.nist.mscp.content.cpe:obj:1" version="1" comment="This variable_object represents the family that the operating system belongs to."/><plist511_object xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#macos" comment="The macOS product version plist object." id="oval:gov.nist.mscp.content.cpe:obj:2" version="1">  <filepath>/System/Library/CoreServices/SystemVersion.plist</filepath>  <xpath>//*[contains(text(), "ProductVersion")]/following-sibling::*[1]/text()</xpath></plist511_object></objects><states><family_state xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#independent" id="oval:gov.nist.mscp.content.cpe:ste:1" version="1" comment="The OS is part of the macOS Family.">  <family>macos</family></family_state><plist511_state xmlns="http://oval.mitre.org/XMLSchema/oval-definitions-5#macos" comment="Is the value is greater than or equal to {0}" id="oval:gov.nist.mscp.content.cpe:ste:2" version="1"><value_of datatype="version" operation="greater than or equal">{0}</value_of></plist511_state></states></oval_definitions></component>""".format(
             current_version_data["os_version"],
             date_time_string,
-            current_version_data["cpe"]
+            current_version_data["cpe"],
         )
 
         scap = scap + xccdf + oval + ocil + cpe + "</data-stream-collection>"
 
-    totaloutput = str()
+    totaloutput = ""
     filenameversion = (
         str(mscp_data["mscp"]["version"]).split(", ", maxsplit=1)[-1].replace(" ", "_")
     )
@@ -737,7 +730,7 @@ def generate_scap(sp: Yaspin, args: argparse.Namespace) -> None:
     output_file = output_file / base_filename
 
     sp.text = "Writing output files"
-    time.sleep(.5)
+    time.sleep(0.5)
 
     create_file(output_file, totaloutput)
 
