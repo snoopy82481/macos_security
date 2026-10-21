@@ -29,6 +29,8 @@ references:
       - CCI-000370
       - CCI-000764
     disa_stig:
+      ios_27:
+        - AIOS-27-010600
       ios_26:
         - AIOS-26-011400
       ios_18:
@@ -74,11 +76,18 @@ references:
 platforms:
   iOS:
     '27.0':
+<<<<<<< HEAD
       benchmarks:
         - name: cis_lvl1_byod
         - name: cis_lvl2_byod
         - name: cis_lvl1_enterprise
         - name: cis_lvl2_enterprise
+=======
+      supervised: false
+      benchmarks:
+        - name: ios_stig
+          severity: medium
+>>>>>>> c17e9024 (Added DISA STIG for iOS/iPadOS 27 to each rule)
     '26.0':
       supervised: false
       benchmarks:
