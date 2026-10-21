@@ -1,6 +1,5 @@
-from typing import Literal
-
-from pydantic import ConfigDict, Field, model_validator
+from typing import Optional, Union, Literal
+from pydantic import Field, ConfigDict, model_validator
 
 from ._base import BaseModelWithAccessors
 
@@ -22,9 +21,10 @@ class ResultDef(BaseModelWithAccessors):
 
     model_config = ConfigDict(extra="ignore")
 
-    string: str | None = None
-    integer: int | ODV | None = None
-    boolean: bool | None = None
+    string: Optional[str] = None
+    integer: Optional[Union[int, ODV]] = None
+    boolean: Optional[bool] = None
+    exit_code: Optional[int] = None
 
 
 class ShellCheck(BaseModelWithAccessors):
@@ -44,8 +44,8 @@ class ShellCheck(BaseModelWithAccessors):
     shell: str = Field(
         "", description="Shell command(s) to evaluate the state of a configuration."
     )
-    result: ResultDef | None = None
-    additional_info: str | None = ""
+    result: Optional[ResultDef] = None
+    additional_info: Optional[str] = ""
 
     @model_validator(mode="after")
     def validate_shell_or_additional_info(self) -> "ShellCheck":
@@ -69,11 +69,11 @@ class ShellFix(BaseModelWithAccessors):
 
     model_config = ConfigDict(extra="ignore")
 
-    shell: str | None = Field(
+    shell: Optional[str] = Field(
         "",
         description="Shell command(s) to fix the configuration if the check command fails.",
     )
-    additional_info: str | None = ""
+    additional_info: Optional[str] = ""
 
     @model_validator(mode="after")
     def validate_shell_or_additional_info(self) -> "ShellFix":
@@ -95,11 +95,11 @@ class DefaultStateShell(BaseModelWithAccessors):
 
     model_config = ConfigDict(extra="ignore")
 
-    shell: str | None = Field(
+    shell: Optional[str] = Field(
         "",
         description="Shell command(s) to restore the system to a default factory state.",
     )
-    note: str | None = ""
+    note: Optional[str] = ""
 
     @model_validator(mode="after")
     def validate_shell_or_note(self) -> "DefaultStateShell":
@@ -124,6 +124,6 @@ class EnforcementInfo(BaseModelWithAccessors):
 
     model_config = ConfigDict(extra="forbid")
 
-    check: ShellCheck | None = None
-    fix: ShellFix | None = None
-    default_state: DefaultStateShell | None = None
+    check: Optional[ShellCheck] = None
+    fix: Optional[ShellFix] = None
+    default_state: Optional[DefaultStateShell] = None
