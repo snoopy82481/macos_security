@@ -276,3 +276,8 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Repository-specific files
+#  Add any additional files or directories specific to your project that should be ignored by Git.
+mscp_gems/
+.bundle/
